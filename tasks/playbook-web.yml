@@ -8,7 +8,7 @@
       name: gpg
       state: latest   
   
-  - name: Récupération de la clé publique pour Yarn
+  - name: Récupération de la clé publique utile pour installer la dernière version de Yarn
     apt_key:
       url: https://dl.yarnpkg.com/debian/pubkey.gpg
       state: present
@@ -96,7 +96,7 @@
     args:
       chdir: /var/www/peertube/peertube-latest
   
-  - name: Configurer Nginx / Ajout d'un site
+  - name: Configurer Nginx / Ajout du site
     template:
       src: ../files/site-peertube
       dest: /etc/nginx/sites-available/peertube
@@ -107,7 +107,9 @@
     template:
       src: ../files/peertube.service
       dest: /etc/systemd/system/peertube.service
-    notify: recharger daemon      
+    notify: 
+      - recharger daemon
+      - redemarrer peertube
 
   - name: Desactiver le site par default
     file:
@@ -144,10 +146,10 @@
       name: nginx
       state: started
 
-  - name: redemarrer peertube
+  - name: demarrer peertube
     service:
       name: peertube
-      state: restarted
+      state: started
   
   handlers: 
     - name: recharger nginx
@@ -157,3 +159,8 @@
         
     - name: recharger daemon 
       command: systemctl daemon-reload 
+    
+    - name: redemarrer peertube
+      service:
+        name: peertube
+        state: restarted

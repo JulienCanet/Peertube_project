@@ -23,17 +23,18 @@
         - postgresql
         - redis
     
-    # - name: Démarrage de redis
-    #   service:
-    #    name: redis
-    #    state: started
+     - name: Démarrage de redis
+       service:
+        name: redis
+        state: started
       
     - name: Changement d'écoute
       lineinfile:
         path: /etc/postgresql/13/main/postgresql.conf
         line: listen_addresses = '*'
+      notify: redemarrer postgres
 
-    - name: Gestion de connexion pour l'utilisateur peertube
+    - name: Gestion de connexion pour postgres
       template:
         src: ../files/pg_hba.conf
         dest: /etc/postgresql/13/main/pg_hba.conf
@@ -69,6 +70,8 @@
          login_user: "{{ postgres_user }}"
          login_host: 127.0.0.1
       with_items: "{{ postgres_ext }}"
+      notify:
+        - redemarrer postgres
 
   handlers:
     - name: redemarrer postgres
