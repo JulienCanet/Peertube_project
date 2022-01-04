@@ -1,0 +1,159 @@
+---
+- name: Deploiement de l'infra web
+  hosts: web
+  tasks:
+
+  - name: Installation de gpg
+    package: 
+      name: gpg
+      state: latest   
+  
+  - name: Récupération de la clé publique pour Yarn
+    apt_key:
+      url: https://dl.yarnpkg.com/debian/pubkey.gpg
+      state: present
+    
+  - name: Récupération de la dernière version de Yarn
+    apt_repository:
+      repo: deb https://dl.yarnpkg.com/debian/ stable main
+      state: present
+
+  - name: Installation des paquets requis
+    package: 
+      name: "{{ paquets }}"
+      state: latest
+    vars: 
+      paquets:
+        - nginx
+        - git
+        - ffmpeg
+        - openssl
+        - yarn
+        - nodejs
+        - unzip
+        - npm
+        - redis-server
+
+  - name: Création d'un lien symbolique entre python3 et python
+    file: 
+      src: /usr/bin/python3
+      dest: /usr/bin/python
+      owner: root
+      group: root
+      state: link
+ 
+  - name: Démarrage de redis
+    service:
+      name: redis
+      state: started
+
+  - name: Ajouter un utilisateur Peertube
+    user:
+      name: "{{ peertube_user }}"
+      shell: /bin/bash
+      password: "{{ peertube_pwd }}"
+
+  - name: Ajout de permissions
+    file:
+      path: "{{ peertube_file_path }}"
+      state: directory
+      owner: "{{ peertube_user }}"
+      group: "{{ peertube_user }}"
+      mode: 0755
+
+  - name: Ajout des permissions sur les dossiers interne
+    file:
+      path: "{{ peertube_file_path }}/{{ item }}"
+      state: directory
+      owner: "{{ peertube_user }}"
+      group: "{{ peertube_user }}"
+      mode: 0750
+    with_items:
+      - config
+      - storage
+      - versions
+
+  - name: Téléchargement et extraction de la dernière version de peertube
+    unarchive:
+      src: https://github.com/Chocobozzz/PeerTube/releases/download/v3.4.1/peertube-v3.4.1.zip
+      dest: "{{ peertube_file_path }}"
+      owner: "{{ peertube_user }}"
+      group: "{{ peertube_user }}"
+      remote_src: yes
+      creates: /var/www/peertube/peertube-v3.4.1 
+
+  - name: Forcage de la dernière version et changement des permissions du dossier
+    file: 
+      src: "{{ peertube_file_path }}/peertube-v3.4.1"
+      dest: "{{ peertube_file_path }}/peertube-latest"
+      owner: "{{ peertube_user }}"
+      group: "{{ peertube_user }}"
+      state: link
+
+
+  - name: Installation de Peertube
+    command: yarn install --production --pure-lockfile --no-optional
+    args:
+      chdir: /var/www/peertube/peertube-latest
+  
+  - name: Configurer Nginx / Ajout d'un site
+    template:
+      src: ../files/site-peertube
+      dest: /etc/nginx/sites-available/peertube
+    notify:
+      - recharger nginx
+
+  - name: Ajout de la configuration des services peertube
+    template:
+      src: ../files/peertube.service
+      dest: /etc/systemd/system/peertube.service
+    notify: recharger daemon      
+
+  - name: Desactiver le site par default
+    file:
+      path: /etc/nginx/sites-enabled/default
+      state: absent
+    notify:
+      - recharger nginx
+
+  - name: Activer le site nginx de peertube
+    file:
+      src: /etc/nginx/sites-available/peertube
+      dest: /etc/nginx/sites-enabled/peertube
+      state: link
+    notify: 
+      - recharger nginx
+
+  - name: Mise à jour du fichier production.yml
+    template:
+      src: ../files/production.yml
+      dest: /var/www/peertube/config/production.yaml
+
+  - name: Génération de la clé privée pour le ssl.
+    openssl_privatekey:
+      path: "/etc/ssl/private/{{ privatessl }}.pem"
+
+  - name: Génération d'un certificat ssl auto-signé
+    openssl_certificate:
+      path: "/etc/ssl/certs/{{ certificatessl }}.crt"
+      privatekey_path: "/etc/ssl/private/{{ privatessl }}.pem"
+      provider: selfsigned
+
+  - name: Demarrer nginx
+    service:
+      name: nginx
+      state: started
+
+  - name: redemarrer peertube
+    service:
+      name: peertube
+      state: restarted
+  
+  handlers: 
+    - name: recharger nginx
+      service: 
+        name: nginx
+        state: reloaded
+        
+    - name: recharger daemon 
+      command: systemctl daemon-reload 

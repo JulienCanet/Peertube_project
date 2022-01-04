@@ -1,0 +1,77 @@
+---
+- name: Deployment de la base de donnée
+  hosts: db
+    
+  pre_tasks:
+    - name: Installation du packages postgreSQL
+      package: 
+         name: "{{ paquets }}" 
+         state: latest 
+      vars:
+        paquets:
+          - postgresql
+          - postgresql-contrib
+          - redis-server
+          - python3-psycopg2
+
+  tasks:
+    - name: Démarrage de service
+      service: 
+       name: "{{ item }}"
+       state: started 
+      with_items:
+        - postgresql
+        - redis
+    
+    # - name: Démarrage de redis
+    #   service:
+    #    name: redis
+    #    state: started
+      
+    - name: Changement d'écoute
+      lineinfile:
+        path: /etc/postgresql/13/main/postgresql.conf
+        line: listen_addresses = '*'
+
+    - name: Gestion de connexion pour l'utilisateur peertube
+      template:
+        src: ../files/pg_hba.conf
+        dest: /etc/postgresql/13/main/pg_hba.conf
+      notify: redemarrer postgres
+
+    - name: initialisation de l'utilisateur posgreSQL
+      postgresql_user:
+        state: present
+        name: "{{ postgres_user }}"
+        password: "{{ postgres_user_pwd }}"
+        login_host: 127.0.0.1
+
+    - name: installation de la DB
+      postgresql_db:
+         state: present
+         name: "{{ postgres_db }}"
+         login_host: 127.0.0.1
+         owner: "{{ postgres_user }}"
+               
+    - name: Création des droits d'accès à la base pour l'utilisateur
+      postgresql_privs:
+        type: database
+        database: "{{ postgres_db }}"
+        roles: "{{ postgres_user }}"
+        grant_option: no
+        privs: all
+        host: 127.0.0.1
+
+    - name: Configuration des extensions de la BD
+      postgresql_ext:
+         db: "{{ postgres_db }}"
+         name: "{{ item }}"
+         login_user: "{{ postgres_user }}"
+         login_host: 127.0.0.1
+      with_items: "{{ postgres_ext }}"
+
+  handlers:
+    - name: redemarrer postgres
+      service:
+        name: postgresql
+        state: restarted

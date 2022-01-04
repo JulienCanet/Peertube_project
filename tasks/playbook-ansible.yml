@@ -1,0 +1,28 @@
+---
+- name: Taches de la vm-ansible
+  hosts: localhost
+
+  vars:
+    inventory_hostname: vm-ansible
+
+  tasks:
+     - name: Mise a jour d'ansible
+       pip: 
+         name: ansible
+         state: latest
+      become: false
+
+    - name: Configuration persistante du reseau
+      template: 
+        src: files/network_int
+        dest: /etc/network/interfaces.d/private
+    
+    - name: Configure hostname
+      hostname: 
+        name: "{{ inventory_hostname }}"
+
+    - name: Resolution du hostname
+      lineinfile:
+        path: /etc/hosts
+        regexp: ^127.0.1.1
+        line: "127.0.1.1 {{ inventory_hostname }}"

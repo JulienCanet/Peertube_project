@@ -1,0 +1,6 @@
+---
+handlers:
+  - name: redemarrer postgres
+    service:
+      name: postgresql
+      state: restarted

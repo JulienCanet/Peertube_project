@@ -1,0 +1,33 @@
+---
+- name: Configuration du systeme 
+  hosts: all
+
+  tasks:
+    
+  - name: Configuration persistente du reseau
+    template:
+      src: files/network_int
+      dest: /etc/network/interfaces.d/private
+  
+  - name: Configuration du hostname
+    hostname:
+      name: "{{ inventory_hostname }}"
+
+  - name: Resolution du hostname
+    lineinfile:
+      path: /etc/hosts
+      regexp: ^127\.0\.1\.1
+      line: 127.0.1.1 "{{ inventory_hostname }}"
+
+  - name: Mise a jour des paquets systeme Debian
+    apt:
+      update_cache: yes
+      upgrade: full
+    when: ansible_distribution == "Debian" or ansible_distribution == "Ubuntu"
+
+  - name: Mise a jour des paquets systeme RedHat
+    dnf:
+      update_cache: yes
+      update_only: yes
+      state: latest
+    when: ansible_distribution == "RedHat" or ansible_distribution == "CentOS"

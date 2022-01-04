@@ -1,0 +1,16 @@
+---
+project_url: ansible.peertube
+peertube_url: 10.42.42.11
+postgres_db_prefix: peertube
+postgres_db_suffix: _prod
+postgres_db: "{{ postgres_db_prefix }}{{ postgres_db_suffix }}"
+postgres_db_password: peertube
+postgres_user: peertube
+postgres_user_pwd: peertube
+postgres_ext:
+  - pg_trgm
+  - unaccent
+peertube_file_path_ssl: /etc/ssl
+
+privatessl: privateKeySsl
+certificatessl: certificateSsl

@@ -1,0 +1,5 @@
+allow-hotplug enp0s8
+iface enp0s8 inet static
+	address {{ ansible_enp0s8.ipv4.address }}
+	netmask {{ ansible_enp0s8.ipv4.netmask }}
+

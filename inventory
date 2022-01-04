@@ -1,0 +1,4 @@
+[db]
+db1.infra.kwi.keyce ansible_host=10.42.42.31
+[web]
+web1.infra.kwi.keyce ansible_host=10.42.42.11

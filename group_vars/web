@@ -1,0 +1,5 @@
+peertube_user: peertube
+peertube_pwd: peertube
+peertube_file_path: /var/www/peertube
+peertube_config_nginx: /etc/nginx/sites-enabled/peertube
+admin_email: julien.canet@e-cdp.com

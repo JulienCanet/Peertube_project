@@ -1,0 +1,6 @@
+#! /bin/bash
+
+while read line
+do
+	username=$(echo $line | cut -d ":" -f 1)
+	password=$(grep "^$username" /etc/sdone </etc/passwd
